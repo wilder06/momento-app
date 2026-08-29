@@ -1,6 +1,6 @@
 # momento-app 🎂
 
-Una experiencia web animada de cumpleaños para Sherly, hecha con React + Vite + Framer Motion.
+Una experiencia web animada de cumpleaños, hecha con React + Vite + Framer Motion.
 
 Incluye: intro con música, torta con velas, minijuego de palabras, globos de deseos, regalos, carta con ramo de rosas y una landing final.
 
