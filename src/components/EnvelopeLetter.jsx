@@ -4,14 +4,12 @@
 //  message returns to the card and the envelope closes -> the scene ends
 //  with a rose that draws itself in red, plus "Repetir sus palabras" and
 //  "Continuar" buttons to wrap up.
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG, fill } from '../config';
 import BirthdayEmojis from './BirthdayEmojis';
 import ConfettiBurst from './ConfettiBurst';
-import RoseDraw from './RoseDraw';
-
-const STEP = {
+import RoseDraw from './RoseDraw';const STEP = {
   CLOSED: 'closed',
   OPENING: 'opening',
   OPEN: 'open',
@@ -21,7 +19,9 @@ const STEP = {
 
 const EnvelopeLetter = ({ onComplete }) => {
   const [step, setStep] = useState(STEP.CLOSED);
+  const [raiseY, setRaiseY] = useState(0);
   const timers = useRef([]);
+  const letterRef = useRef(null);
 
   const schedule = (fn, ms) => {
     const t = setTimeout(() => {
@@ -50,6 +50,21 @@ const EnvelopeLetter = ({ onComplete }) => {
   // card raised (out of envelope) while reading; lowers back down when closing
   const cardRaised = step === STEP.OPENING || step === STEP.OPEN;
   const body = fill(CONFIG.letterMessage);
+
+  // Raise the card just enough that its top edge stays visible on screen,
+  // regardless of device size. framer `y` is negative when moving up.
+  const measureRaise = () => {
+    const el = letterRef.current;
+    if (!el) return;
+    const elRect = el.getBoundingClientRect();
+    const viewportTop = Math.round(window.innerHeight * 0.02);
+    // Move the letter up so its top lands at ~2% of the viewport height.
+    setRaiseY(-Math.max(0, elRect.top - viewportTop));
+  };
+
+  useLayoutEffect(() => {
+    if (cardRaised) measureRaise();
+  }, [cardRaised]);
 
   return (
     <div
@@ -163,16 +178,16 @@ const EnvelopeLetter = ({ onComplete }) => {
             <div className="envelope-stage-static" style={{ position: 'relative', width: 'min(400px, 92vw)', height: '340px' }}>
               {/* the letter */}
               <motion.div
+                ref={letterRef}
                 className="letter"
-                animate={
-                  cardRaised
-                    ? { y: -300, opacity: 1 }
-                    : step === STEP.OPENING
-                    ? { y: -300, opacity: 1 }
-                    : { y: 0, opacity: 1 }
-                }
+                animate={cardRaised ? { y: raiseY, opacity: 1 } : { y: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 80, damping: 16 }}
-                style={{ width: 'min(380px, 88vw)' }}
+                style={{
+                  width: 'min(380px, 88vw)',
+                  height: cardRaised ? 'auto' : '260px',
+                  overflow: cardRaised ? 'visible' : 'hidden',
+                  zIndex: cardRaised ? 10 : 0,
+                }}
               >
                 <div className="letter-paper">
                   <p className="letter-title">{fill(CONFIG.letterTitle)}</p>

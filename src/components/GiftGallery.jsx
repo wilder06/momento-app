@@ -2,22 +2,54 @@
 // "Un regalo para ti" — an animated field of floating gift boxes (like the
 // balloons scene, no scrolling). Each gift bobs and sways; tap one to pop it
 // open, reveal its message, then it disappears. Every gift has its own emoji.
-import { useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../config';
 import ConfettiBurst from './ConfettiBurst';
 import BirthdayEmojis from './BirthdayEmojis';
+import Modal from './Modal';
 
 const PALETTE = ['#ff5e8a', '#ffb03a', '#6bcb77', '#4d96ff', '#9b59b6', '#ff6b6b'];
 // Distinct emoji per gift so each box feels unique
 const GIFT_ICONS = ['💝', '🎀', '🧸', '🏆', '💐', '🍀'];
 
+// How long each message stays visible: based on text length, with a floor.
+const readTime = (text) => Math.max(2800, Math.min(6000, 1900 + text.length * 42));
+
+// Queues opened-gift messages so each one (including the long anecdote) is
+// read in full, one at a time, even during a quick burst of taps.
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'OPEN': {
+      const opened = state.opened.map((o, k) => (k === action.i ? true : o));
+      let { queue, revealed } = state;
+      if (revealed === null) revealed = action.i;
+      else queue = [...queue, action.i];
+      return { ...state, opened, queue, revealed };
+    }
+    case 'ADVANCE': {
+      if (state.queue.length > 0) {
+        return { ...state, revealed: state.queue[0], queue: state.queue.slice(1) };
+      }
+      return { ...state, revealed: null };
+    }
+    default:
+      return state;
+  }
+};
+
 const GiftGallery = ({ onComplete }) => {
   const gifts = CONFIG.giftMessages;
-  const [opened, setOpened] = useState(() => gifts.map(() => false));
-  const [revealed, setRevealed] = useState(null);
+  // The "special" golden gift (loaded last, carrying the personal anecdote).
+  const specialIndex = gifts.length - 1;
+  const [state, dispatch] = useReducer(reducer, null, () => ({
+    opened: gifts.map(() => false),
+    queue: [],
+    revealed: null,
+  }));
+  const { opened, queue, revealed } = state;
   const [burstId, setBurstId] = useState(null);
-  const [allOpen, setAllOpen] = useState(false);
+  const allOpen = opened.length > 0 && opened.every(Boolean);
 
   // stable random positions/sizes for the field
   const [boxes] = useState(() =>
@@ -34,19 +66,36 @@ const GiftGallery = ({ onComplete }) => {
 
   const openGift = (i) => {
     if (opened[i]) return;
-    const next = opened.map((o, idx) => (idx === i ? true : o));
-    setOpened(next);
+    dispatch({ type: 'OPEN', i });
     setBurstId(i);
-    setRevealed(i);
-    if (next.every(Boolean)) {
-      setAllOpen(true);
-      setTimeout(onComplete, 3000);
-    }
-    setTimeout(() => setRevealed(null), 2800);
     setTimeout(() => setBurstId(null), 650);
   };
 
+  // Each message stays long enough to be read; longer messages (like the
+  // anecdote) get more time. Then show the next queued one, or finish.
+  useEffect(() => {
+    if (revealed === null) return;
+    const text = revealed === specialIndex ? CONFIG.specialGiftMessage : gifts[revealed];
+    const t = setTimeout(() => dispatch({ type: 'ADVANCE' }), readTime(text));
+    return () => clearTimeout(t);
+  }, [revealed, gifts, specialIndex]);
+
+  // Finish once every gift is opened AND all messages have been read.
+  const allRead = revealed === null && queue.length === 0 && opened.length > 0 && opened.every(Boolean);
+  useEffect(() => {
+    if (allRead) {
+      const t = setTimeout(onComplete, 900);
+      return () => clearTimeout(t);
+    }
+  }, [allRead, onComplete]);
+
   const remaining = opened.filter((o) => !o).length;
+
+  // Safety net: if the user never opens all gifts, advance automatically.
+  useEffect(() => {
+    const t = setTimeout(onComplete, 40000);
+    return () => clearTimeout(t);
+  }, [onComplete]);
 
   return (
     <div
@@ -186,43 +235,39 @@ const GiftGallery = ({ onComplete }) => {
 
       {allOpen && <ConfettiBurst emojis count={90} />}
 
-      {/* Revealed message (floats above the field, then gift disappears) */}
-      <AnimatePresence>
-        {revealed !== null && (
-          <motion.div
-            key={revealed}
-            initial={{ opacity: 0, y: 30, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7 }}
-            transition={{ type: 'spring', stiffness: 160, damping: 14 }}
+      {/* Revealed message (floats above the field via viewport portal) */}
+      <Modal
+        show={revealed !== null}
+        bg="linear-gradient(135deg,#fff,#fff6f0)"
+        color="#5a4a3a"
+        width="min(420px, 88vw)"
+        borderRadius="18px"
+        innerPadding="24px 26px"
+        border={revealed !== null ? `3px solid ${PALETTE[revealed % PALETTE.length]}55` : undefined}
+      >
+        <div style={{ fontSize: '2.4rem' }}>
+          {revealed === specialIndex ? '💎✨' : `${GIFT_ICONS[revealed % GIFT_ICONS.length]} ✨`}
+        </div>
+        {revealed === specialIndex && (
+          <p
             style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'linear-gradient(135deg,#fff,#fff6f0)',
-              color: '#5a4a3a',
-              borderRadius: '18px',
-              padding: '24px 26px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-              maxWidth: 'min(420px, 88vw)',
-              textAlign: 'center',
-              zIndex: 60,
-              border: `3px solid ${PALETTE[revealed % PALETTE.length]}55`,
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: '#9a7b00',
+              fontFamily: "'Pacifico','Brush Script MT',cursive",
+              margin: '6px 0 2px',
             }}
           >
-            <div style={{ fontSize: '2.4rem' }}>
-              {GIFT_ICONS[revealed % GIFT_ICONS.length]} ✨
-            </div>
-            <p style={{ fontSize: '1.15rem', lineHeight: 1.6, margin: '12px 0 6px', fontWeight: 600 }}>
-              {gifts[revealed]}
-            </p>
-            <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#999', margin: 0 }}>
-              — de parte de {CONFIG.senderName}
-            </p>
-          </motion.div>
+            Un recuerdo muy especial para {CONFIG.name} 💛
+          </p>
         )}
-      </AnimatePresence>
+        <p style={{ fontSize: '1.05rem', lineHeight: 1.6, margin: '12px 0 6px', fontWeight: 600, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          {revealed === specialIndex ? CONFIG.specialGiftMessage : gifts[revealed]}
+        </p>
+        <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#999', margin: 0 }}>
+          — de parte de {CONFIG.senderName}
+        </p>
+      </Modal>
     </div>
   );
 };

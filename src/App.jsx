@@ -10,6 +10,7 @@ import SparksScene from './components/SparksScene';
 import GiftGallery from './components/GiftGallery';
 import EnvelopeLetter from './components/EnvelopeLetter';
 import FinalScene from './components/FinalScene';
+import FeedbackScene from './components/FeedbackScene';
 import './App.css';
 
 const SCENES = {
@@ -20,6 +21,7 @@ const SCENES = {
   gifts: 'gifts',
   letter: 'letter',
   final: 'final',
+  feedback: 'feedback',
 };
 
 const ORDER = [
@@ -30,6 +32,7 @@ const ORDER = [
   SCENES.gifts,
   SCENES.letter,
   SCENES.final,
+  SCENES.feedback,
 ];
 
 function App() {
@@ -47,13 +50,13 @@ function App() {
     switch (scene) {
       case SCENES.cake:
         return (
-          <SceneWrapper key="cake">
+          <SceneWrapper key="cake" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
             <BirthdayCake onComplete={next} />
           </SceneWrapper>
         );
       case SCENES.game:
         return (
-          <SceneWrapper key="game">
+          <SceneWrapper key="game" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
             <Minigame onComplete={next} />
           </SceneWrapper>
         );
@@ -65,20 +68,26 @@ function App() {
         );
       case SCENES.gifts:
         return (
-          <SceneWrapper key="gifts">
+          <SceneWrapper key="gifts" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
             <GiftGallery onComplete={next} />
           </SceneWrapper>
         );
       case SCENES.letter:
         return (
-          <SceneWrapper key="letter">
+          <SceneWrapper key="letter" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
             <EnvelopeLetter onComplete={next} />
           </SceneWrapper>
         );
       case SCENES.final:
         return (
-          <SceneWrapper key="final">
-            <FinalScene onRestart={reset} />
+          <SceneWrapper key="final" style={{ justifyContent: 'center' }}>
+            <FinalScene onRestart={reset} onFinish={next} />
+          </SceneWrapper>
+        );
+      case SCENES.feedback:
+        return (
+          <SceneWrapper key="feedback">
+            <FeedbackScene onBack={() => setScene(SCENES.final)} />
           </SceneWrapper>
         );
       case SCENES.intro:

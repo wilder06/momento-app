@@ -3,9 +3,10 @@
 // candle per year of age. Tap a candle to blow it out. When all are
 // out, celebrate with confetti and advance to the game.
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CONFIG } from '../config';
 import ConfettiBurst from './ConfettiBurst';
+import Modal from './Modal';
 import { useSounds } from '../hooks/useSounds';
 
 const BirthdayCake = ({ onComplete }) => {
@@ -227,36 +228,16 @@ const BirthdayCake = ({ onComplete }) => {
 
       {win && <ConfettiBurst />}
 
-      <AnimatePresence>
-        {win && (
-          <motion.div
-            className="celebration-modal"
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, rotate: 180 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'linear-gradient(135deg, #ff7eb3 0%, #ff758c 100%)',
-              padding: '34px 26px',
-              borderRadius: '24px',
-              color: 'white',
-              textAlign: 'center',
-              zIndex: 60,
-              boxShadow: '0 24px 70px rgba(0,0,0,0.45)',
-              width: 'min(90%, 340px)',
-            }}
-          >
-            <div style={{ fontSize: '3rem' }}>🎉✨🎂</div>
-            <h2 style={{ fontSize: '2rem', margin: '10px 0' }}>¡Felicidades!</h2>
-            <p style={{ fontSize: '1.1rem', margin: 0 }}>
-              Has apagado todas las velas. Que tu deseo se haga realidad 💫
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Modal
+        show={win}
+        bg="linear-gradient(135deg,#ff7eb3 0%,#ff758c 100%)"
+      >
+        <div style={{ fontSize: '3rem' }}>🎉✨🎂</div>
+        <h2 style={{ fontSize: '2rem', margin: '10px 0' }}>¡Felicidades!</h2>
+        <p style={{ fontSize: '1.1rem', margin: 0 }}>
+          Has apagado todas las velas. Que tu deseo se haga realidad 💫
+        </p>
+      </Modal>
     </div>
   );
 };

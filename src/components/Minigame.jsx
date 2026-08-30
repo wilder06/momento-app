@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../config';
 import ConfettiBurst from './ConfettiBurst';
+import Modal from './Modal';
 
 const shuffle = (arr) => {
   const a = [...arr];
@@ -110,9 +111,9 @@ const Minigame = ({ onComplete }) => {
             animate={ch ? { scale: [0, 1.15, 1] } : {}}
             transition={{ duration: 0.35 }}
             style={{
-              width: '48px',
-              height: '56px',
-              fontSize: '1.6rem',
+              width: 'clamp(38px, 9vw, 48px)',
+              height: 'clamp(46px, 10vw, 56px)',
+              fontSize: 'clamp(1.3rem, 4.5vw, 1.6rem)',
               fontWeight: 800,
               borderRadius: '12px',
               display: 'flex',
@@ -157,9 +158,9 @@ const Minigame = ({ onComplete }) => {
               transition={{ type: 'spring', stiffness: 220, damping: 16, delay: 0.2 }}
               onClick={() => tryPlace(i)}
               style={{
-                width: '52px',
-                height: '60px',
-                fontSize: '1.7rem',
+                width: 'clamp(42px, 10vw, 52px)',
+                height: 'clamp(48px, 11vw, 60px)',
+                fontSize: 'clamp(1.4rem, 5vw, 1.7rem)',
                 fontWeight: 800,
                 border: 'none',
                 borderRadius: '12px',
@@ -203,37 +204,22 @@ const Minigame = ({ onComplete }) => {
       </p>
 
       {won && <ConfettiBurst />}
-      <AnimatePresence>
-        {won && (
-          <motion.div
-            className="celebration-modal"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'linear-gradient(135deg,#6bcb77,#4d96ff)',
-              padding: '34px 26px',
-              borderRadius: '24px',
-              color: 'white',
-              textAlign: 'center',
-              zIndex: 60,
-              boxShadow: '0 24px 70px rgba(0,0,0,0.45)',
-              width: 'min(90%, 340px)',
-            }}
-          >
-            <div style={{ fontSize: '3rem' }}>🏆🎉</div>
-            <h2 style={{ fontSize: '1.8rem', margin: '10px 0' }}>¡Lo lograste!</h2>
-            <p style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>{word}</p>
-            <p style={{ fontSize: '0.95rem', margin: '10px 0 0' }}>
-              {wordMessage || '¡Porque eres exactamente eso y mucho más! Ahora, tus regalos te esperan 🎁'}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Modal show={won} bg="linear-gradient(135deg,#6bcb77,#4d96ff)">
+        <div style={{ fontSize: '3rem' }}>🏆🎉</div>
+        <h2 style={{ fontSize: '1.8rem', margin: '10px 0' }}>¡Lo lograste!</h2>
+        <p style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>{word}</p>
+        <p
+          style={{
+            fontSize: '1rem',
+            lineHeight: 1.6,
+            margin: '10px 0 0',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+          }}
+        >
+          {wordMessage || '¡Porque eres exactamente eso y mucho más! Ahora, tus regalos te esperan 🎁'}
+        </p>
+      </Modal>
     </div>
   );
 };

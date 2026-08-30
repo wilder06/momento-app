@@ -116,6 +116,20 @@ export const CONFIG = {
   letterMessage:
     "Quería recordarte lo especial que eres y lo importante que es tu día. Este pequeño regalo digital es solo una forma de decirte cuánto te aprecio.\n\nQue la vida te devuelva todo el cariño y la alegría que regalas a quienes te rodean.\n\n¡Feliz cumpleaños de corazón!",
   letterSignature: "Con mucho cariño, de parte de {WILDER}",
+
+  // 👇 FEEDBACK / COMENTARIO (botón "Finalizar")
+  // MVP: el comentario NO se envía a ningún lado; queda en el dispositivo y
+  // solo se agradece. Para escalar a producción, conectar aquí un endpoint de
+  // formularios (Formspree/backend) desde FeedbackScene.jsx.
+  feedbackTitle: "💬 Cuéntanos tu opinión",
+  feedbackIntro:
+    "Gracias por llegar hasta el final. ¿Qué te pareció la experiencia? Se vale todo: un recuerdo, una crítica, una idea… 🥰",
+  feedbackPlaceholder: "Escribe aquí tu comentario…",
+  feedbackSendLabel: "Enviar comentario",
+  feedbackBackLabel: "← Volver",
+  feedbackSentTitle: "¡Gracias! 🎉",
+  feedbackSentMessage:
+    "Gracias por tomarte el tiempo de compartir tu opinión. Que tengas un día increíble, te lo mereces. 💖",
 };
 
 // Helper para reemplazar {NOMBRE} y {WILDER} con los valores reales

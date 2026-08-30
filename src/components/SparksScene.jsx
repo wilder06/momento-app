@@ -2,22 +2,52 @@
 // "Globos de deseos" — an interactive, spectacular scene of floating
 // balloons. Tap each balloon to pop it and release a wish written only
 // by you. When all are popped, confetti rains and the scene advances.
-import { useState, useEffect } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../config';
 import ConfettiBurst from './ConfettiBurst';
 import BirthdayEmojis from './BirthdayEmojis';
+import Modal from './Modal';
 import { useSounds } from '../hooks/useSounds';
 
 const COLORS = ['#ff5e8a', '#ffb03a', '#6bcb77', '#4d96ff', '#9b59b6', '#ff6f61', '#f9a825', '#00bcd4'];
 
+// How long each bubble stays visible: based on text length, with a floor.
+const readTime = (text) => Math.max(2400, Math.min(5000, 1700 + text.length * 45));
+
+// Queues popped-balloon wishes so each one is read in full, one at a time,
+// even if the user taps many balloons in a quick burst.
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'POP': {
+      const popped = state.popped.map((p, k) => (k === action.i ? true : p));
+      let { queue, revealed } = state;
+      if (revealed === null) revealed = action.i;
+      else queue = [...queue, action.i];
+      return { ...state, popped, queue, revealed };
+    }
+    case 'ADVANCE': {
+      if (state.queue.length > 0) {
+        return { ...state, revealed: state.queue[0], queue: state.queue.slice(1) };
+      }
+      return { ...state, revealed: null };
+    }
+    default:
+      return state;
+  }
+};
+
 const SparksScene = ({ onComplete }) => {
   const { pop, chime } = useSounds();
   const messages = CONFIG.sparkMessages;
-  const [popped, setPopped] = useState(() => messages.map(() => false));
-  const [revealed, setRevealed] = useState(null);
+  const [state, dispatch] = useReducer(reducer, null, () => ({
+    popped: messages.map(() => false),
+    queue: [],
+    revealed: null,
+  }));
+  const { popped, queue, revealed } = state;
   const [burstId, setBurstId] = useState(null);
-  const [allPopped, setAllPopped] = useState(false);
+  const allPopped = popped.length > 0 && popped.every(Boolean);
 
   // Random stable positions/sizes per balloon
   const [balloons] = useState(() =>
@@ -34,24 +64,38 @@ const SparksScene = ({ onComplete }) => {
   const popBalloon = (i) => {
     if (popped[i]) return;
     pop();
-    const nextPopped = popped.map((p, idx) => (idx === i ? true : p));
-    setPopped(nextPopped);
+    dispatch({ type: 'POP', i });
     setBurstId(i);
-    setRevealed(i);
-    if (nextPopped.every(Boolean)) {
-      setAllPopped(true);
-      chime();
-      setTimeout(onComplete, 2600);
-    }
-    setTimeout(() => setRevealed(null), 2600);
     setTimeout(() => setBurstId(null), 600);
   };
+
+  // Play a chime celebration once every balloon has been popped.
+  useEffect(() => {
+    if (allPopped) chime();
+  }, [allPopped, chime]);
+
+  // Auto-close each shown message after its read time, then show the next
+  // queued one (or finish once every balloon has been popped and read).
+  useEffect(() => {
+    if (revealed === null) return;
+    const t = setTimeout(() => dispatch({ type: 'ADVANCE' }), readTime(messages[revealed]));
+    return () => clearTimeout(t);
+  }, [revealed, messages]);
+
+  // Finish once every balloon is popped AND all wishes have been read.
+  const allRead = revealed === null && queue.length === 0 && popped.length > 0 && popped.every(Boolean);
+  useEffect(() => {
+    if (allRead) {
+      const t = setTimeout(onComplete, 900);
+      return () => clearTimeout(t);
+    }
+  }, [allRead, onComplete]);
 
   const remaining = popped.filter((p) => !p).length;
 
   // Safety net: if the user never pops all balloons, advance automatically
   useEffect(() => {
-    const t = setTimeout(onComplete, 30000);
+    const t = setTimeout(onComplete, 40000);
     return () => clearTimeout(t);
   }, [onComplete]);
 
@@ -171,35 +215,24 @@ const SparksScene = ({ onComplete }) => {
 
       {allPopped && <ConfettiBurst emojis count={90} />}
 
-      {/* Revealed wish */}
-      <AnimatePresence>
-        {revealed !== null && (
-          <motion.div
-            key={revealed}
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 160, damping: 14 }}
-            style={{
-              background: 'linear-gradient(135deg,#fff,#fff6f0)',
-              color: '#5a4a3a',
-              borderRadius: '16px',
-              padding: '18px 22px',
-              boxShadow: '0 14px 34px rgba(0,0,0,0.22)',
-              maxWidth: '420px',
-              border: `3px solid ${COLORS[revealed % COLORS.length]}55`,
-            }}
-          >
-            <div style={{ fontSize: '1.4rem' }}>🎈💫</div>
-            <p style={{ fontSize: '1.08rem', lineHeight: 1.6, margin: '8px 0 4px' }}>
-              {messages[revealed]}
-            </p>
-            <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#999', margin: 0 }}>
-              — de parte de {CONFIG.senderName}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Revealed wish (one at a time, shown long enough to read) */}
+      <Modal
+        show={revealed !== null}
+        bg="linear-gradient(135deg,#fff,#fff6f0)"
+        color="#5a4a3a"
+        width="min(420px, 88vw)"
+        borderRadius="16px"
+        innerPadding="20px 22px"
+        border={revealed !== null ? `3px solid ${COLORS[revealed % COLORS.length]}55` : undefined}
+      >
+        <div style={{ fontSize: '1.6rem' }}>🎈💫</div>
+        <p style={{ fontSize: '1.1rem', lineHeight: 1.6, margin: '10px 0 6px', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          {revealed !== null ? messages[revealed] : ''}
+        </p>
+        <p style={{ fontSize: '0.9rem', fontStyle: 'italic', color: '#999', margin: 0 }}>
+          — de parte de {CONFIG.senderName}
+        </p>
+      </Modal>
     </div>
   );
 };
